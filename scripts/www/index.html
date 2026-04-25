@@ -1,11 +1,212 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>PakePlus</title>
-    </head>
-    <body>
-        PakePlus
-    </body>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频管理端</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:"微软雅黑",sans-serif;}
+        /* 统一淡紫色渐变登录背景 */
+        body{
+            background: linear-gradient(135deg,#b8a0e8,#9d7fe0);
+            min-height:100vh;
+        }
+        .login-box{
+            width:90%;
+            max-width:400px;
+            background:rgba(255,255,255,0.9);
+            border-radius:16px;
+            padding:30px;
+            margin:80px auto;
+        }
+        .login-box h2{
+            text-align:center;
+            color:#7b5fc9;
+            margin-bottom:25px;
+        }
+        .input-item{
+            margin-bottom:18px;
+        }
+        .input-item input{
+            width:100%;
+            height:45px;
+            border:1px solid #d8c8f0;
+            border-radius:8px;
+            padding:0 15px;
+            font-size:16px;
+            outline:none;
+        }
+        .btn{
+            width:100%;
+            height:45px;
+            background:#8c6ed8;
+            color:#fff;
+            border:none;
+            border-radius:8px;
+            font-size:16px;
+            cursor:pointer;
+            margin-top:5px;
+        }
+        .btn:hover{background:#7b5fc9;}
+        .btn-del{background:#e55353;}
+        .btn-del:hover{background:#d03c3c;}
+
+        /* 主页面样式 和另外两端统一 */
+        .main-box{
+            display:none;
+            width:95%;
+            margin:20px auto;
+            padding:15px;
+        }
+        .title-bar{
+            text-align:center;
+            color:#fff;
+            font-size:20px;
+            margin-bottom:20px;
+        }
+        .admin-card{
+            background:rgba(255,255,255,0.9);
+            border-radius:12px;
+            padding:20px;
+            margin-bottom:20px;
+        }
+        .user-item{
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            padding:12px;
+            border-bottom:1px solid #eee;
+        }
+        .count-text{
+            font-size:18px;
+            color:#7b5fc9;
+            font-weight:bold;
+            margin-bottom:15px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 登录页面 -->
+    <div class="login-box" id="loginPage">
+        <h2>管理端登录</h2>
+        <div class="input-item">
+            <input type="text" id="username" placeholder="请输入登录姓名">
+        </div>
+        <div class="input-item">
+            <input type="password" id="pwd" placeholder="请输入登录密码">
+        </div>
+        <button class="btn" onclick="login()">立即登录</button>
+    </div>
+
+    <!-- 管理端主页面 -->
+    <div class="main-box" id="mainPage">
+        <div class="title-bar">视频后台管理端</div>
+
+        <div class="admin-card">
+            <div class="count-text">当前注册总人数：<span id="userCount">0</span> 人</div>
+            <h3>所有注册用户列表</h3>
+            <div id="userListBox"></div>
+        </div>
+
+        <!-- 复用视频列表（和发布端客户端互通） -->
+        <div class="admin-card">
+            <h3>平台最新视频列表</h3>
+            <div id="videoListBox"></div>
+        </div>
+    </div>
+
+    <script>
+        // 通用本地存储Key 和之前发布端、客户端完全一致
+        const USER_KEY = "video_app_user_list";
+        const VIDEO_KEY = "video_app_list";
+        const ADMIN_LOGIN_KEY = "admin_login_cache";
+
+        // 页面加载自动回填上次登录密码（本地保存）
+        window.onload = function(){
+            let cache = localStorage.getItem(ADMIN_LOGIN_KEY);
+            if(cache){
+                let info = JSON.parse(cache);
+                document.getElementById("username").value = info.username;
+                document.getElementById("pwd").value = info.pwd;
+            }
+            // 初始化创建用户数组（不存在就新建）
+            if(!localStorage.getItem(USER_KEY)){
+                localStorage.setItem(USER_KEY,JSON.stringify([]));
+            }
+        }
+
+        // 登录逻辑 + 保存密码到本地
+        function login(){
+            let name = document.getElementById("username").value.trim();
+            let pwd = document.getElementById("pwd").value.trim();
+            if(!name || !pwd){
+                alert("请填写姓名和密码！");
+                return;
+            }
+            // 保存登录信息本地缓存，下次自动填充
+            localStorage.setItem(ADMIN_LOGIN_KEY,JSON.stringify({
+                username:name,
+                pwd:pwd
+            }));
+
+            // 进入管理主页
+            document.getElementById("loginPage").style.display = "none";
+            document.getElementById("mainPage").style.display = "block";
+            
+            renderUserList();
+            renderVideoList();
+        }
+
+        // 渲染注册用户列表 + 统计人数
+        function renderUserList(){
+            let userArr = JSON.parse(localStorage.getItem(USER_KEY) || "[]");
+            document.getElementById("userCount").innerText = userArr.length;
+            let box = document.getElementById("userListBox");
+            box.innerHTML = "";
+
+            userArr.forEach((item,index)=>{
+                box.innerHTML += `
+                    <div class="user-item">
+                        <div>
+                            <p>用户名：${item.username}</p>
+                            <p>注册密码：${item.password}</p>
+                        </div>
+                        <button class="btn btn-del" onclick="delUserCheck(${index})">删除用户</button>
+                    </div>
+                `;
+            });
+        }
+
+        // 删除二次密码确认
+        function delUserCheck(index){
+            let inputPwd = prompt("请输入管理密码二次确认删除：");
+            let adminCache = JSON.parse(localStorage.getItem(ADMIN_LOGIN_KEY));
+            if(inputPwd !== adminCache.pwd){
+                alert("密码错误，删除失败！");
+                return;
+            }
+            // 密码正确执行删除
+            let userArr = JSON.parse(localStorage.getItem(USER_KEY));
+            userArr.splice(index,1);
+            localStorage.setItem(USER_KEY,JSON.stringify(userArr));
+            alert("用户删除成功！");
+            renderUserList();
+        }
+
+        // 渲染互通视频列表
+        function renderVideoList(){
+            let videoArr = JSON.parse(localStorage.getItem(VIDEO_KEY) || "[]");
+            let box = document.getElementById("videoListBox");
+            box.innerHTML = "";
+            videoArr.forEach(item=>{
+                box.innerHTML += `
+                    <div class="user-item">
+                        <p>视频名称：${item.name}</p>
+                        <p>发布时间：${item.time}</p>
+                    </div>
+                `;
+            });
+        }
+    </script>
+</body>
 </html>
