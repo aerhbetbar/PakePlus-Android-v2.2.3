@@ -1,11 +1,183 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>PakePlus</title>
-    </head>
-    <body>
-        PakePlus
-    </body>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频发布端</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:"微软雅黑",sans-serif;}
+        /* 淡紫色渐变登录背景 */
+        body{
+            background: linear-gradient(135deg,#b8a0e8,#9d7fe0);
+            min-height:100vh;
+        }
+        /* 登录容器 */
+        .login-box{
+            width:90%;
+            max-width:400px;
+            background:rgba(255,255,255,0.9);
+            border-radius:16px;
+            padding:30px;
+            margin:80px auto;
+        }
+        .login-box h2{
+            text-align:center;
+            color:#7b5fc9;
+            margin-bottom:25px;
+        }
+        .input-item{
+            margin-bottom:18px;
+        }
+        .input-item input{
+            width:100%;
+            height:45px;
+            border:1px solid #d8c8f0;
+            border-radius:8px;
+            padding:0 15px;
+            font-size:16px;
+            outline:none;
+        }
+        .btn{
+            width:100%;
+            height:45px;
+            background:#8c6ed8;
+            color:#fff;
+            border:none;
+            border-radius:8px;
+            font-size:16px;
+            cursor:pointer;
+        }
+        .btn:hover{background:#7b5fc9;}
+
+        /* 主页面容器 默认隐藏 */
+        .main-box{
+            display:none;
+            width:95%;
+            margin:20px auto;
+            padding:15px;
+        }
+        .title-bar{
+            text-align:center;
+            color:#fff;
+            font-size:20px;
+            margin-bottom:20px;
+        }
+        .publish-area{
+            background:rgba(255,255,255,0.9);
+            border-radius:12px;
+            padding:20px;
+            margin-bottom:20px;
+        }
+        .video-list{
+            background:rgba(255,255,255,0.9);
+            border-radius:12px;
+            padding:20px;
+        }
+        .video-item{
+            padding:10px;
+            border-bottom:1px solid #eee;
+            margin-bottom:10px;
+        }
+        video{
+            width:100%;
+            border-radius:8px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 登录页面 -->
+    <div class="login-box" id="loginPage">
+        <h2>账号登录</h2>
+        <div class="input-item">
+            <input type="text" id="username" placeholder="请输入姓名">
+        </div>
+        <div class="input-item">
+            <input type="password" id="pwd" placeholder="请输入密码">
+        </div>
+        <button class="btn" onclick="login()">登录</button>
+    </div>
+
+    <!-- 主功能页面 -->
+    <div class="main-box" id="mainPage">
+        <div class="title-bar">视频发布管理端</div>
+
+        <!-- 发布视频区域 -->
+        <div class="publish-area">
+            <h3>发布新视频（选择本地文件）</h3>
+            <input type="file" id="videoFile" accept="video/*" style="margin:15px 0;">
+            <button class="btn" onclick="publishVideo()">确认发布</button>
+        </div>
+
+        <!-- 视频列表展示 -->
+        <div class="video-list">
+            <h3>最新视频列表</h3>
+            <div id="videoListBox"></div>
+        </div>
+    </div>
+
+    <script>
+        // 本地存储key
+        const USER_KEY = "video_app_user";
+        const VIDEO_KEY = "video_app_list";
+
+        // 登录逻辑 账号存在手机本地存储
+        function login(){
+            let name = document.getElementById("username").value.trim();
+            let pwd = document.getElementById("pwd").value.trim();
+            if(!name || !pwd){
+                alert("请填写姓名和密码！");
+                return;
+            }
+            // 保存账号到本地存储
+            let userInfo = {username:name,password:pwd};
+            localStorage.setItem(USER_KEY,JSON.stringify(userInfo));
+            
+            // 切换页面
+            document.getElementById("loginPage").style.display = "none";
+            document.getElementById("mainPage").style.display = "block";
+            renderVideoList();
+        }
+
+        // 发布视频：选取本地视频文件存入本地
+        function publishVideo(){
+            let file = document.getElementById("videoFile").files[0];
+            if(!file){
+                alert("请选择本地视频文件！");
+                return;
+            }
+            // 生成本地视频临时播放地址
+            let videoUrl = URL.createObjectURL(file);
+            let nowTime = new Date().toLocaleString();
+
+            // 读取原有视频列表
+            let videoArr = JSON.parse(localStorage.getItem(VIDEO_KEY) || "[]");
+            videoArr.unshift({
+                name:file.name,
+                url:videoUrl,
+                time:nowTime
+            });
+            // 保存到手机本地存储空间
+            localStorage.setItem(VIDEO_KEY,JSON.stringify(videoArr));
+            alert("视频发布成功！");
+            renderVideoList();
+        }
+
+        // 渲染视频列表
+        function renderVideoList(){
+            let videoArr = JSON.parse(localStorage.getItem(VIDEO_KEY) || "[]");
+            let box = document.getElementById("videoListBox");
+            box.innerHTML = "";
+            videoArr.forEach(item=>{
+                let html = `
+                    <div class="video-item">
+                        <p>视频名称：${item.name}</p>
+                        <p>发布时间：${item.time}</p>
+                        <video controls src="${item.url}"></video>
+                    </div>
+                `;
+                box.innerHTML += html;
+            });
+        }
+    </script>
+</body>
 </html>
